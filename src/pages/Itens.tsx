@@ -1,25 +1,42 @@
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-
-type Item = {
-  id: string
-  exercicio_id: string
-  elemento_despesa_id: string
-  codigo: string | null
-  descricao: string
-  valor_estimado: number
-  valor_atualizado: number
-}
-
-type ElementoDespesa = {
-  id: string
-  codigo: string
-  descricao: string
-}
+import ItemForm, {
+  type DotacaoForm,
+  type OpcoesDotacao,
+  type SetorDemandante,
+} from '../components/itens/ItemForm'
+import ItemTable, {
+  type Item,
+  type Dotacao,
+} from '../components/itens/ItemTable'
 
 type ItensProps = {
   exercicioId: string
+}
+
+const tabelas = {
+  funcoes: 'funcoes_governo',
+  subfuncoes: 'subfuncoes_governo',
+  programas: 'programas',
+  acoes: 'acoes_orcamentarias',
+  categorias: 'categorias_economicas',
+  grupos: 'grupos_natureza_despesa',
+  modalidades: 'modalidades_aplicacao',
+  elementos: 'elementos_despesa',
+  subelementos: 'subelementos_despesa',
+} as const
+
+const opcoesVazias: OpcoesDotacao = {
+  funcoes: [],
+  subfuncoes: [],
+  programas: [],
+  acoes: [],
+  categorias: [],
+  grupos: [],
+  modalidades: [],
+  elementos: [],
+  subelementos: [],
 }
 
 function formatarMoeda(valor: number) {
@@ -31,23 +48,22 @@ function formatarMoeda(valor: number) {
 
 export default function Itens({ exercicioId }: ItensProps) {
   const [itens, setItens] = useState<Item[]>([])
-  const [elementos, setElementos] = useState<ElementoDespesa[]>([])
-  const [busca, setBusca] = useState('')
+  const [setores, setSetores] = useState<SetorDemandante[]>([])
+  const [opcoes, setOpcoes] = useState<OpcoesDotacao>(opcoesVazias)
+  const [dotacoes, setDotacoes] = useState<Record<string, Dotacao[]>>({})
+
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
-
+  const [mensagemErro, setMensagemErro] = useState<string | null>(null)
   const [formularioAberto, setFormularioAberto] = useState(false)
   const [salvando, setSalvando] = useState(false)
 
-  const [codigo, setCodigo] = useState('')
-  const [descricao, setDescricao] = useState('')
-  const [elementoId, setElementoId] = useState('')
-  const [mensagemErro, setMensagemErro] = useState<string | null>(null)
-
-  async function carregarDados() {
+  const carregarDados = useCallback(async () => {
     if (!exercicioId) {
       setItens([])
-      setElementos([])
+      setSetores([])
+      setOpcoes(opcoesVazias)
+      setDotacoes({})
       setCarregando(false)
       return
     }
@@ -55,86 +71,195 @@ export default function Itens({ exercicioId }: ItensProps) {
     setCarregando(true)
     setErro(null)
 
-    const [itensResult, elementosResult] = await Promise.all([
-      supabase
-        .from('v_itens_pca_totais')
-        .select('*')
-        .eq('exercicio_id', exercicioId)
-        .order('descricao'),
+    try {
+      const [
+        itensResult,
+        setoresResult,
+        funcoesResult,
+        subfuncoesResult,
+        programasResult,
+        acoesResult,
+        categoriasResult,
+        gruposResult,
+        modalidadesResult,
+        elementosResult,
+        subelementosResult,
+        dotacoesResult,
+        vinculosResult,
+      ] = await Promise.all([
+        supabase
+          .from('v_itens_pca_totais')
+          .select('*')
+          .eq('exercicio_id', exercicioId)
+          .order('descricao'),
 
-      supabase
-        .from('elementos_despesa')
-        .select('id, codigo, descricao')
-        .eq('exercicio_id', exercicioId)
-        .eq('ativo', true)
-        .order('codigo'),
-    ])
+        supabase
+          .from('setor_demandante')
+          .select('id, nome')
+          .order('nome'),
 
-    if (itensResult.error) {
-      setErro(itensResult.error.message)
-      setItens([])
-    } else {
-      setItens((itensResult.data ?? []) as Item[])
-    }
+        supabase
+          .from(tabelas.funcoes)
+          .select('id, codigo, descricao')
+          .eq('exercicio_id', exercicioId)
+          .eq('ativo', true)
+          .order('codigo'),
 
-    if (elementosResult.error) {
-      setErro((atual) =>
-        atual
-          ? `${atual} | ${elementosResult.error.message}`
-          : elementosResult.error.message,
+        supabase
+          .from(tabelas.subfuncoes)
+          .select('id, codigo, descricao')
+          .eq('exercicio_id', exercicioId)
+          .eq('ativo', true)
+          .order('codigo'),
+
+        supabase
+          .from(tabelas.programas)
+          .select('id, codigo, descricao')
+          .eq('exercicio_id', exercicioId)
+          .eq('ativo', true)
+          .order('codigo'),
+
+        supabase
+          .from(tabelas.acoes)
+          .select('id, codigo, descricao')
+          .eq('exercicio_id', exercicioId)
+          .eq('ativo', true)
+          .order('codigo'),
+
+        supabase
+          .from(tabelas.categorias)
+          .select('id, codigo, descricao')
+          .eq('exercicio_id', exercicioId)
+          .eq('ativo', true)
+          .order('codigo'),
+
+        supabase
+          .from(tabelas.grupos)
+          .select('id, codigo, descricao')
+          .eq('exercicio_id', exercicioId)
+          .eq('ativo', true)
+          .order('codigo'),
+
+        supabase
+          .from(tabelas.modalidades)
+          .select('id, codigo, descricao')
+          .eq('exercicio_id', exercicioId)
+          .eq('ativo', true)
+          .order('codigo'),
+
+        supabase
+          .from(tabelas.elementos)
+          .select('id, codigo, descricao')
+          .eq('exercicio_id', exercicioId)
+          .eq('ativo', true)
+          .order('codigo'),
+
+        supabase
+          .from(tabelas.subelementos)
+          .select('id, codigo, descricao, elemento_id')
+          .eq('exercicio_id', exercicioId)
+          .eq('ativo', true)
+          .order('codigo'),
+
+        supabase
+          .from('itens_pca_dotacoes')
+          .select(
+            'id, item_pca_id, funcao_id, subfuncao_id, programa_id, acao_orcamentaria_id, categoria_economica_id, grupo_natureza_id, modalidade_aplicacao_id, elemento_despesa_id, subelemento_id, valor_estimado, valor_atualizado',
+          )
+          .eq('exercicio_id', exercicioId),
+
+        supabase
+          .from('itens_pca')
+          .select('id, setor_demandante_id')
+          .eq('exercicio_id', exercicioId),
+      ])
+
+      const resultados = [
+        itensResult,
+        setoresResult,
+        funcoesResult,
+        subfuncoesResult,
+        programasResult,
+        acoesResult,
+        categoriasResult,
+        gruposResult,
+        modalidadesResult,
+        elementosResult,
+        subelementosResult,
+        dotacoesResult,
+        vinculosResult,
+      ]
+
+      const erros = resultados
+        .filter((resultado) => resultado.error)
+        .map((resultado) => resultado.error!.message)
+
+      if (erros.length > 0) {
+        throw new Error(erros.join(' | '))
+      }
+
+      const setoresPorItem = new Map<string, number | null>(
+        (vinculosResult.data ?? []).map((v) => [
+          v.id,
+          v.setor_demandante_id,
+        ]),
       )
-      setElementos([])
-    } else {
-      setElementos(elementosResult.data ?? [])
-    }
 
-    setCarregando(false)
-  }
+      const itensCarregados = (itensResult.data ?? []).map((item) => ({
+        ...item,
+        setor_demandante_id: setoresPorItem.get(item.id) ?? null,
+      })) as Item[]
+
+      setItens(itensCarregados)
+      setSetores((setoresResult.data ?? []) as SetorDemandante[])
+
+      setOpcoes({
+        funcoes: funcoesResult.data ?? [],
+        subfuncoes: subfuncoesResult.data ?? [],
+        programas: programasResult.data ?? [],
+        acoes: acoesResult.data ?? [],
+        categorias: categoriasResult.data ?? [],
+        grupos: gruposResult.data ?? [],
+        modalidades: modalidadesResult.data ?? [],
+        elementos: elementosResult.data ?? [],
+        subelementos: (subelementosResult.data ?? []).map((s) => ({
+          ...s,
+          elemento_id: String(s.elemento_id),
+        })),
+      })
+
+      const dotacoesPorItem: Record<string, Dotacao[]> = {}
+
+      for (const dotacao of (dotacoesResult.data ?? []) as Dotacao[]) {
+        if (!dotacoesPorItem[dotacao.item_pca_id]) {
+          dotacoesPorItem[dotacao.item_pca_id] = []
+        }
+
+        dotacoesPorItem[dotacao.item_pca_id].push(dotacao)
+      }
+
+      setDotacoes(dotacoesPorItem)
+    } catch (error) {
+      setErro(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível carregar os dados dos itens.',
+      )
+    } finally {
+      setCarregando(false)
+    }
+  }, [exercicioId])
 
   useEffect(() => {
     void carregarDados()
-  }, [exercicioId])
+  }, [carregarDados])
 
-  const itensFiltrados = useMemo(() => {
-    const termo = busca.trim().toLocaleLowerCase('pt-BR')
-
-    if (!termo) return itens
-
-    return itens.filter((item) => {
-      const elemento = elementos.find(
-        (e) => e.id === item.elemento_despesa_id,
-      )
-
-      return [
-        item.codigo ?? '',
-        item.descricao,
-        elemento?.codigo ?? '',
-        elemento?.descricao ?? '',
-      ].some((valor) =>
-        valor.toLocaleLowerCase('pt-BR').includes(termo),
-      )
-    })
-  }, [itens, elementos, busca])
-
-  const totalEstimado = itens.reduce(
-    (total, item) => total + Number(item.valor_estimado || 0),
-    0,
-  )
-
-  const totalAtualizado = itens.reduce(
-    (total, item) => total + Number(item.valor_atualizado || 0),
-    0,
-  )
-
-  function limparFormulario() {
-    setCodigo('')
-    setDescricao('')
-    setElementoId('')
-    setMensagemErro(null)
-  }
-
-  async function salvarItem(evento: React.FormEvent<HTMLFormElement>) {
-    evento.preventDefault()
+  async function salvarItem(dados: {
+    codigo: string
+    descricao: string
+    setorId: string
+    dotacoes: DotacaoForm[]
+  }) {
     setMensagemErro(null)
 
     if (!exercicioId) {
@@ -142,28 +267,115 @@ export default function Itens({ exercicioId }: ItensProps) {
       return
     }
 
-    setSalvando(true)
-
-    const { error: erroCadastro } = await supabase
-      .from('itens_pca')
-      .insert({
-        exercicio_id: exercicioId,
-        elemento_despesa_id: elementoId,
-        codigo: codigo.trim() || null,
-        descricao: descricao.trim(),
-      })
-
-    if (erroCadastro) {
-      setMensagemErro(erroCadastro.message)
-      setSalvando(false)
+    if (dados.dotacoes.length === 0) {
+      setMensagemErro('Adicione pelo menos uma dotação orçamentária.')
       return
     }
 
-    setSalvando(false)
-    setFormularioAberto(false)
-    limparFormulario()
-    await carregarDados()
+    setSalvando(true)
+
+    let itemId: string | null = null
+
+    try {
+      const primeiraDotacao = dados.dotacoes[0]
+
+      const { data: itemCriado, error: erroCadastro } = await supabase
+        .from('itens_pca')
+        .insert({
+          exercicio_id: exercicioId,
+          elemento_despesa_id: primeiraDotacao.elemento,
+          setor_demandante_id: Number(dados.setorId),
+          codigo: dados.codigo || null,
+          descricao: dados.descricao,
+        })
+        .select('id')
+        .single()
+
+      if (erroCadastro) throw erroCadastro
+
+      if (!itemCriado) {
+        throw new Error('O banco de dados não retornou o item criado.')
+      }
+
+      itemId = itemCriado.id
+
+      const registrosDotacao = dados.dotacoes.map((dotacao) => ({
+        exercicio_id: exercicioId,
+        item_pca_id: itemCriado.id,
+        funcao_id: dotacao.funcao,
+        subfuncao_id: dotacao.subfuncao,
+        programa_id: dotacao.programa,
+        acao_orcamentaria_id: dotacao.acao,
+        categoria_economica_id: dotacao.categoria,
+        grupo_natureza_id: dotacao.grupo,
+        modalidade_aplicacao_id: dotacao.modalidade,
+        elemento_despesa_id: dotacao.elemento,
+        subelemento_id: dotacao.subelemento,
+        valor_estimado: Number(dotacao.valorEstimado),
+        valor_atualizado: Number(dotacao.valorAtualizado),
+      }))
+
+      const { error: erroDotacao } = await supabase
+        .from('itens_pca_dotacoes')
+        .insert(registrosDotacao)
+
+      if (erroDotacao) throw erroDotacao
+
+      setFormularioAberto(false)
+      setMensagemErro(null)
+
+      await carregarDados()
+    } catch (error) {
+      const erroSupabase = error as {
+  message?: string
+  code?: string
+  details?: string
+  hint?: string
+}
+
+const mensagem = [
+  erroSupabase.message || 'Ocorreu um erro desconhecido.',
+  erroSupabase.code ? `Código: ${erroSupabase.code}` : '',
+  erroSupabase.details ? `Detalhes: ${erroSupabase.details}` : '',
+  erroSupabase.hint ? `Orientação: ${erroSupabase.hint}` : '',
+]
+  .filter(Boolean)
+  .join(' | ')
+
+      if (itemId) {
+        const { error: erroRemocao } = await supabase
+          .from('itens_pca')
+          .delete()
+          .eq('id', itemId)
+
+        if (erroRemocao) {
+          setMensagemErro(
+            `Não foi possível salvar o item: ${mensagem}. Também não foi possível remover o cadastro incompleto: ${erroRemocao.message}`,
+          )
+        } else {
+          setMensagemErro(
+            `Não foi possível salvar as dotações: ${mensagem}. O item criado foi removido para evitar um cadastro incompleto.`,
+          )
+        }
+      } else {
+        setMensagemErro(`Não foi possível salvar o item: ${mensagem}`)
+      }
+    } finally {
+      setSalvando(false)
+    }
   }
+
+  const totalItens = itens.length
+
+  const totalDotacoes = Object.values(dotacoes).reduce(
+    (total, lista) => total + lista.length,
+    0,
+  )
+
+  const valorEstimadoTotal = itens.reduce(
+    (total, item) => total + Number(item.valor_estimado || 0),
+    0,
+  )
 
   return (
     <>
@@ -175,179 +387,61 @@ export default function Itens({ exercicioId }: ItensProps) {
         {!formularioAberto && (
           <button
             className="primary-button"
-            onClick={() => setFormularioAberto(true)}
-            disabled={!exercicioId}
+            onClick={() => {
+              setMensagemErro(null)
+              setFormularioAberto(true)
+            }}
+            disabled={!exercicioId || carregando}
           >
-            <span aria-hidden="true">＋</span> Novo item
+            Novo item
           </button>
         )}
       </div>
 
       {formularioAberto ? (
-        <div className="form-card">
-          <div className="form-heading">
-            <h2>Novo item do PCA</h2>
-          </div>
-
-          <form onSubmit={salvarItem}>
-            <div className="form-grid">
-              <label className="form-field">
-                <span>Código</span>
-                <input
-                  value={codigo}
-                  onChange={(evento) => setCodigo(evento.target.value)}
-                  placeholder="Opcional"
-                  maxLength={50}
-                />
-              </label>
-
-              <label className="form-field">
-                <span>Elemento de despesa</span>
-                <select
-                  value={elementoId}
-                  onChange={(evento) => setElementoId(evento.target.value)}
-                  required
-                >
-                  <option value="">Selecione um elemento</option>
-                  {elementos.map((elemento) => (
-                    <option key={elemento.id} value={elemento.id}>
-                      {elemento.codigo} — {elemento.descricao}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="form-field form-field-full">
-                <span>Descrição do item</span>
-                <input
-                  value={descricao}
-                  onChange={(evento) => setDescricao(evento.target.value)}
-                  placeholder="Informe a descrição do item"
-                  required
-                  maxLength={500}
-                />
-              </label>
-            </div>
-
-            {elementos.length === 0 && (
-              <p className="form-hint">
-                Não há elementos de despesa ativos cadastrados neste exercício.
-              </p>
-            )}
-
-            {mensagemErro && (
-              <p className="form-error" role="alert">
-                {mensagemErro}
-              </p>
-            )}
-
-            <div className="form-actions">
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={() => {
-                  setFormularioAberto(false)
-                  limparFormulario()
-                }}
-                disabled={salvando}
-              >
-                Cancelar
-              </button>
-
-              <button
-                type="submit"
-                className="primary-button"
-                disabled={salvando || elementos.length === 0}
-              >
-                {salvando ? 'Salvando...' : 'Salvar item'}
-              </button>
-            </div>
-          </form>
-        </div>
+        <ItemForm
+          setores={setores}
+          opcoes={opcoes}
+          salvando={salvando}
+          erro={mensagemErro}
+          onCancel={() => {
+            setFormularioAberto(false)
+            setMensagemErro(null)
+          }}
+          onSave={salvarItem}
+        />
       ) : (
         <>
           <div className="process-summary">
             <div className="summary-card">
               <span>Total de itens</span>
-              <strong>{itens.length}</strong>
+              <strong>{totalItens}</strong>
             </div>
 
             <div className="summary-card">
-              <span>Valor estimado</span>
-              <strong>{formatarMoeda(totalEstimado)}</strong>
+              <span>Total de dotações</span>
+              <strong>{totalDotacoes}</strong>
             </div>
 
             <div className="summary-card">
-              <span>Valor atualizado</span>
-              <strong>{formatarMoeda(totalAtualizado)}</strong>
+              <span>Valor estimado total</span>
+              <strong>{formatarMoeda(valorEstimadoTotal)}</strong>
             </div>
           </div>
 
-          <div className="table-card">
-            <div className="table-toolbar">
-              <input
-                type="search"
-                value={busca}
-                onChange={(evento) => setBusca(evento.target.value)}
-                placeholder="Pesquisar itens..."
-                aria-label="Pesquisar itens"
-              />
-            </div>
-
-            {carregando ? (
-              <div className="table-state">Carregando itens...</div>
-            ) : erro ? (
-              <div className="table-state error-state">
-                Erro ao carregar itens: {erro}
-              </div>
-            ) : itensFiltrados.length === 0 ? (
-              <div className="table-state">
-                {busca
-                  ? 'Nenhum item encontrado para essa pesquisa.'
-                  : 'Nenhum item cadastrado neste exercício.'}
-              </div>
-            ) : (
-              <div className="table-responsive">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Código</th>
-                      <th>Descrição</th>
-                      <th>Elemento de despesa</th>
-                      <th>Valor estimado</th>
-                      <th>Valor atualizado</th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {itensFiltrados.map((item) => {
-                      const elemento = elementos.find(
-                        (e) => e.id === item.elemento_despesa_id,
-                      )
-
-                      return (
-                        <tr key={item.id}>
-                          <td>{item.codigo || '—'}</td>
-                          <td>{item.descricao}</td>
-                          <td>
-                            {elemento
-                              ? `${elemento.codigo} — ${elemento.descricao}`
-                              : '—'}
-                          </td>
-                          <td>
-                            {formatarMoeda(Number(item.valor_estimado || 0))}
-                          </td>
-                          <td>
-                            {formatarMoeda(Number(item.valor_atualizado || 0))}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+          <ItemTable
+            itens={itens}
+            setores={setores}
+            dotacoes={dotacoes}
+            opcoes={opcoes}
+            carregando={carregando}
+            erro={erro}
+            aoNovoItem={() => {
+              setMensagemErro(null)
+              setFormularioAberto(true)
+            }}
+            permitirNovoItem={Boolean(exercicioId) && !carregando}
+          />
         </>
       )}
     </>

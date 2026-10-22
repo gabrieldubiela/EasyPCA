@@ -8,7 +8,9 @@ const paginas = [
   { nome: 'Painel'},
   { nome: 'Processos'},
   { nome: 'Itens'},
-  { nome: 'Classificação orçamentária'},
+  { nome: 'Orçamento'},
+  { nome: 'Demandantes'},
+  { nome: 'Relatórios'},
 ]
 
 export default function Sidebar({

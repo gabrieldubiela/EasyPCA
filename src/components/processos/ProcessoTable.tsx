@@ -64,11 +64,6 @@ export default function ProcessoTable({
   return (
     <div className="list-panel">
       <div className="list-toolbar">
-        <div>
-          <h2>Todos os processos</h2>
-          <span>{processosFiltrados.length} registro(s)</span>
-        </div>
-
         <input
           type="search"
           className="search-input"
@@ -87,17 +82,12 @@ export default function ProcessoTable({
         </div>
       ) : processosFiltrados.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-icon">▤</div>
           <strong>
             {busca
               ? 'Nenhum processo encontrado'
               : 'Nenhum processo cadastrado'}
           </strong>
-          <p>
-            {busca
-              ? 'Tente buscar usando outro termo.'
-              : 'Os processos cadastrados para este exercício aparecerão aqui.'}
-          </p>
+          {busca && <p>Tente buscar usando outro termo.</p>}
         </div>
       ) : (
         <div className="table-scroll">
@@ -107,7 +97,7 @@ export default function ProcessoTable({
                 <th>Processo de compras</th>
                 <th>Processo eletrônico</th>
                 <th>Objeto</th>
-                <th>Setor demandante</th>
+                <th>Demandante</th>
                 <th>Itens</th>
                 <th>Modalidade</th>
                 <th>Valor estimado</th>
@@ -133,13 +123,9 @@ export default function ProcessoTable({
 
                   <td>{processo.setor_demandante || '—'}</td>
 
-                  <td>
-                    {processo.quantidade_itens ?? 0}
-                  </td>
+                  <td>{processo.quantidade_itens ?? 0}</td>
 
-                  <td>
-                    {processo.numero_modalidade || '—'}
-                  </td>
+                  <td>{processo.numero_modalidade || '—'}</td>
 
                   <td>{formatarMoeda(processo.valor_estimado)}</td>
 

@@ -1069,3 +1069,304 @@ a:hover {
   color: var(--navy);
   background: #d8eaff;
 }
+
+
+/* =========================================================
+   FORMULÁRIOS — PADRÃO GERAL EASY PCA
+========================================================= */
+
+.form-panel {
+  width: 100%;
+  padding: 28px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.process-form {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  width: 100%;
+  padding: 0;
+}
+
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-bottom: 26px;
+  border-bottom: 1px solid var(--border);
+}
+
+.form-section:last-of-type {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.form-section-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.form-section-heading h3 {
+  margin: 0;
+  color: #425a75;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.form-section-heading p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 22px 24px;
+  width: 100%;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.form-field-full {
+  grid-column: 1 / -1;
+}
+
+.form-field label {
+  color: #526780;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.form-field input,
+.form-field select,
+.form-field textarea {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 10px 12px;
+
+  border: 1px solid #d5deea;
+  border-radius: 6px;
+
+  color: #42566e;
+  background: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.form-field textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.form-field input::placeholder,
+.form-field textarea::placeholder {
+  color: #9aa8b8;
+}
+
+.form-field input:hover,
+.form-field select:hover,
+.form-field textarea:hover {
+  border-color: #b9c9dc;
+}
+
+.form-field input:focus,
+.form-field select:focus,
+.form-field textarea:focus {
+  border-color: #82b4e4;
+  outline: none;
+  box-shadow: 0 0 0 3px rgb(49 134 216 / 10%);
+}
+
+.form-required-note {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 9px 16px;
+
+  border: 1px solid #d5deea;
+  border-radius: var(--radius-sm);
+
+  color: #60738a;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 600;
+
+  transition:
+    border-color 150ms ease,
+    background 150ms ease;
+}
+
+.secondary-button:hover:not(:disabled) {
+  border-color: #bdcddd;
+  background: #f7f9fc;
+}
+
+.form-required-note .required-mark,
+.form-field label .required-mark {
+  color: #b86b68;
+}
+
+@media (max-width: 900px) {
+  .form-panel {
+    padding: 22px;
+  }
+
+  .form-grid {
+    gap: 18px;
+  }
+}
+
+
+.form-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.form-required-note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+
+/* Formulário de itens — complementos de layout */
+
+.form-section-heading-row {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.form-section-heading-row > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.dotacao-card {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 24px 0;
+  border-top: 1px solid var(--border);
+}
+
+.dotacao-card:first-of-type {
+  border-top: 0;
+}
+
+.dotacao-card .form-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.dotacao-card .form-heading h3 {
+  margin: 0;
+  color: var(--navy);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.form-hint {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.dotacao-card .form-hint strong {
+  color: var(--text-primary);
+}
+
+.itens-pca-selecao {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.item-pca-opcao {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.item-pca-opcao:has(input:checked) {
+  border-color: #a7cbed;
+  background: #f7fbff;
+}
+
+.item-pca-detalhes {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.item-pca-detalhes strong {
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+@media (max-width: 1100px) {
+  .form-section-heading-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

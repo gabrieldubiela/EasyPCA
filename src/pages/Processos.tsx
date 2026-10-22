@@ -85,7 +85,7 @@ export default function Processos({
         <>
           <div className="process-summary">
             <div className="summary-card">
-              <span>Total de processos</span>
+              <span>Total</span>
               <strong>{totalProcessos}</strong>
             </div>
 

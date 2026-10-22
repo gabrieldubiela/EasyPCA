@@ -364,21 +364,18 @@ export default function Painel({
 
             <div className="painel-grade">
               <CartaoIndicador
-                titulo="Total de processos"
+                titulo="Total"
                 valor={String(totalProcessos)}
-                descricao="Processos do exercício selecionado"
               />
 
               <CartaoIndicador
                 titulo="Processos concluídos"
                 valor={formatarPercentual(percentualConcluidos)}
-                descricao={`${processosConcluidos.length} de ${totalProcessos} processos`}
               />
 
               <CartaoIndicador
                 titulo="Processos em atraso"
                 valor={formatarPercentual(percentualAtrasados)}
-                descricao={`${processosAtrasados.length} processo(s) com prazo vencido`}
               />
             </div>
 
@@ -396,37 +393,28 @@ export default function Painel({
           </section>
 
           <section className="painel-secao">
-            <h2>Valores do PCA</h2>
+            <h2>Valores</h2>
 
             <div className="painel-grade">
-              <CartaoIndicador
-                titulo="Valor total do PCA"
-                valor={formatarMoeda(valorEstimadoTotal)}
-                descricao="Referência pelo valor estimado"
-              />
-
+              
               <CartaoIndicador
                 titulo="Valor estimado"
                 valor={formatarMoeda(valorEstimadoTotal)}
-                descricao="Soma dos valores estimados dos itens"
               />
 
               <CartaoIndicador
                 titulo="Valor atualizado"
                 valor={formatarMoeda(valorAtualizadoTotal)}
-                descricao="Soma dos valores atualizados dos itens"
               />
 
               <CartaoIndicador
                 titulo="Economia dos processos concluídos"
                 valor={formatarMoeda(economia)}
-                descricao="Estimado menos atualizado dos concluídos"
               />
 
               <CartaoIndicador
-                titulo="Conclusão financeira do PCA"
+                titulo="Concluído"
                 valor={formatarPercentual(percentualFinanceiro)}
-                descricao={`${formatarMoeda(valorEstimadoConcluido)} em processos concluídos`}
               />
             </div>
           </section>

@@ -1,0 +1,220 @@
+
+import { useMemo, useState } from 'react'
+import type {
+  Opcao,
+  SetorDemandante,
+  OpcoesDotacao,
+} from './ItemForm'
+
+export type Item = {
+  id: string
+  exercicio_id: string
+  elemento_despesa_id: string
+  setor_demandante_id: number | null
+  codigo: string | null
+  descricao: string
+  valor_estimado: number
+  valor_atualizado: number
+}
+
+export type Dotacao = {
+  id: string
+  item_pca_id: string
+  funcao_id: string
+  subfuncao_id: string
+  programa_id: string
+  acao_orcamentaria_id: string
+  categoria_economica_id: string
+  grupo_natureza_id: string
+  modalidade_aplicacao_id: string
+  elemento_despesa_id: string
+  subelemento_id: string
+  valor_estimado: number
+  valor_atualizado: number
+}
+
+type Props = {
+  itens: Item[]
+  setores: SetorDemandante[]
+  dotacoes: Record<string, Dotacao[]>
+  opcoes: OpcoesDotacao
+  carregando: boolean
+  erro: string | null
+  aoNovoItem: () => void
+  permitirNovoItem: boolean
+}
+
+function formatarMoeda(valor: number | null | undefined) {
+  if (valor == null) return '—'
+
+  return Number(valor).toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  })
+}
+
+function textoDotacao(
+  dotacao: Dotacao,
+  opcoes: Record<keyof OpcoesDotacao, Opcao[]>,
+) {
+  const correspondencias: {
+    campo: keyof Dotacao
+    grupo: keyof OpcoesDotacao
+  }[] = [
+    { campo: 'funcao_id', grupo: 'funcoes' },
+    { campo: 'subfuncao_id', grupo: 'subfuncoes' },
+    { campo: 'programa_id', grupo: 'programas' },
+    { campo: 'acao_orcamentaria_id', grupo: 'acoes' },
+    { campo: 'categoria_economica_id', grupo: 'categorias' },
+    { campo: 'grupo_natureza_id', grupo: 'grupos' },
+    { campo: 'modalidade_aplicacao_id', grupo: 'modalidades' },
+    { campo: 'elemento_despesa_id', grupo: 'elementos' },
+    { campo: 'subelemento_id', grupo: 'subelementos' },
+  ]
+
+  return correspondencias
+    .map(
+      ({ campo, grupo }) =>
+        opcoes[grupo].find(
+          (opcao) => opcao.id === dotacao[campo],
+        )?.codigo ?? '—',
+    )
+    .join('.')
+}
+
+export default function ItemTable({
+  itens,
+  setores,
+  dotacoes,
+  opcoes,
+  carregando,
+  erro,
+}: Props) {
+  const [busca, setBusca] = useState('')
+
+  const termo = busca.toLocaleLowerCase('pt-BR').trim()
+
+  const itensFiltrados = useMemo(() => {
+    return itens.filter((item) => {
+      if (!termo) return true
+
+      const setor = setores.find(
+        (s) => s.id === item.setor_demandante_id,
+      )
+
+      const codigosDotacoes = (dotacoes[item.id] ?? [])
+        .map((dotacao) => textoDotacao(dotacao, opcoes))
+        .join(' ')
+
+      return [
+        item.codigo ?? '',
+        item.descricao,
+        setor?.nome ?? '',
+        codigosDotacoes,
+      ].some((valor) =>
+        valor.toLocaleLowerCase('pt-BR').includes(termo),
+      )
+    })
+  }, [itens, setores, dotacoes, opcoes, termo])
+
+  return (
+    <div className="list-panel">
+      <div className="list-toolbar">
+        <input
+          type="search"
+          className="search-input"
+          placeholder="Buscar por número, objeto, setor ou dotação..."
+          value={busca}
+          onChange={(event) => setBusca(event.target.value)}
+          aria-label="Buscar itens"
+        />
+      </div>
+
+      {carregando ? (
+        <div className="empty-state">
+          Carregando itens...
+        </div>
+      ) : erro ? (
+        <div className="empty-state error">
+          Não foi possível carregar os itens: {erro}
+        </div>
+      ) : itensFiltrados.length === 0 ? (
+        <div className="empty-state">
+          <strong>
+            {busca
+              ? 'Nenhum item encontrado'
+              : 'Nenhum item cadastrado'}
+          </strong>
+
+          {busca && (
+            <p>Tente pesquisar usando outro termo.</p>
+          )}
+        </div>
+      ) : (
+        <div className="table-scroll">
+          <table className="process-table">
+            <thead>
+              <tr>
+                <th>Número</th>
+                <th>Objeto</th>
+                <th>Demandante</th>
+                <th>Dotações orçamentárias</th>
+                <th>Valor estimado</th>
+                <th>Valor atualizado</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {itensFiltrados.map((item) => {
+                const dotacoesDoItem = dotacoes[item.id] ?? []
+
+                const setorDemandante = setores.find(
+                  (setor) =>
+                    setor.id === item.setor_demandante_id,
+                )
+
+                return (
+                  <tr key={item.id}>
+                    <td>{item.codigo || '—'}</td>
+
+                    <td>
+                      <strong>{item.descricao}</strong>
+                    </td>
+
+                    <td>
+                      {setorDemandante?.nome || '—'}
+                    </td>
+
+                    <td>
+                      {dotacoesDoItem.length === 0 ? (
+                        '—'
+                      ) : (
+                        <div className="item-dotacoes">
+                          {dotacoesDoItem.map((dotacao) => (
+                            <div key={dotacao.id}>                              
+                              <div>
+                                {textoDotacao(dotacao, opcoes)}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </td>
+
+                    <td>
+                      {formatarMoeda(item.valor_estimado)}
+                    </td>
+
+                    <td>
+                      {formatarMoeda(item.valor_atualizado)}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
