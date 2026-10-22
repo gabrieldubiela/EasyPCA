@@ -30,7 +30,6 @@ export default function Sidebar({
             }`}
             onClick={() => onSelecionarPagina(pagina.nome)}
           >
-            <span className="nav-symbol">{pagina.simbolo}</span>
             <span>{pagina.nome}</span>
           </button>
         ))}

@@ -14,7 +14,6 @@ type HeaderProps = {
 }
 
 export default function Header({
-  paginaAtiva,
   exercicioId,
   exercicios,
   carregando,

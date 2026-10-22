@@ -147,7 +147,6 @@ function DistribuicaoLista({
 }
 
 export default function Painel({
-  exercicios,
   exercicioSelecionado,
   carregando,
   erro,

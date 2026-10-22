@@ -36,7 +36,6 @@ type ProcessosProps = {
 
 export default function Processos({
   exercicioId,
-  exercicioSelecionado,
   processos,
   carregandoProcessos,
   erroProcessos,

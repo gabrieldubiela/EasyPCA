@@ -5,6 +5,7 @@ import Sidebar from './components/layout/Sidebar'
 import Header from './components/layout/Header'
 import Painel from './pages/Painel'
 import Processos from './pages/Processos'
+import Itens from './pages/Itens'
 import './App.css'
 
 type Exercicio = {
@@ -109,9 +110,7 @@ export default function App() {
     <div className="app-shell">
       <Sidebar
         paginaAtiva={paginaAtiva}
-        onSelecionarPagina={(pagina) => {
-          setPaginaAtiva(pagina)
-        }}
+        onSelecionarPagina={setPaginaAtiva}
       />
 
       <main className="main-area">
@@ -143,6 +142,8 @@ export default function App() {
                 setAtualizacaoProcessos((valor) => valor + 1)
               }}
             />
+          ) : paginaAtiva === 'Itens' ? (
+            <Itens exercicioId={exercicioId} />
           ) : (
             <div className="page-heading">
               <div>
