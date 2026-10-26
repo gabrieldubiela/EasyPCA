@@ -5,6 +5,7 @@ import ItemForm, {
   type DotacaoForm,
   type OpcoesDotacao,
   type SetorDemandante,
+  type ClassificacaoObjeto,
 } from '../components/itens/ItemForm'
 import ItemTable, {
   type Item,
@@ -37,6 +38,7 @@ const opcoesVazias: OpcoesDotacao = {
   modalidades: [],
   elementos: [],
   subelementos: [],
+  classificacoesObjeto: [],
 }
 
 function formatarMoeda(valor: number) {
@@ -84,6 +86,7 @@ export default function Itens({ exercicioId }: ItensProps) {
         modalidadesResult,
         elementosResult,
         subelementosResult,
+        classificacoesObjetoResult,
         dotacoesResult,
         vinculosResult,
       ] = await Promise.all([
@@ -162,6 +165,11 @@ export default function Itens({ exercicioId }: ItensProps) {
           .order('codigo'),
 
         supabase
+          .from('classificacoes_objeto')
+          .select('id, codigo, descricao')
+          .order('codigo'),
+
+        supabase
           .from('itens_pca_dotacoes')
           .select(
             'id, item_pca_id, funcao_id, subfuncao_id, programa_id, acao_orcamentaria_id, categoria_economica_id, grupo_natureza_id, modalidade_aplicacao_id, elemento_despesa_id, subelemento_id, valor_estimado, valor_atualizado',
@@ -186,6 +194,7 @@ export default function Itens({ exercicioId }: ItensProps) {
         modalidadesResult,
         elementosResult,
         subelementosResult,
+        classificacoesObjetoResult,
         dotacoesResult,
         vinculosResult,
       ]
@@ -226,6 +235,8 @@ export default function Itens({ exercicioId }: ItensProps) {
           ...s,
           elemento_id: String(s.elemento_id),
         })),
+        classificacoesObjeto:
+          (classificacoesObjetoResult.data ?? []) as ClassificacaoObjeto[],
       })
 
       const dotacoesPorItem: Record<string, Dotacao[]> = {}
@@ -311,6 +322,7 @@ export default function Itens({ exercicioId }: ItensProps) {
         modalidade_aplicacao_id: dotacao.modalidade,
         elemento_despesa_id: dotacao.elemento,
         subelemento_id: dotacao.subelemento,
+        classificacao_objeto_id: dotacao.classificacaoObjeto,
         valor_estimado: Number(dotacao.valorEstimado),
         valor_atualizado: Number(dotacao.valorAtualizado),
       }))
@@ -365,17 +377,48 @@ const mensagem = [
     }
   }
 
-  const totalItens = itens.length
+  
+const totalItens = itens.length
 
-  const totalDotacoes = Object.values(dotacoes).reduce(
-    (total, lista) => total + lista.length,
-    0,
-  )
+const valorEstimadoTotal = itens.reduce(
+  (total, item) => total + Number(item.valor_estimado || 0),
+  0,
+)
 
-  const valorEstimadoTotal = itens.reduce(
-    (total, item) => total + Number(item.valor_estimado || 0),
-    0,
-  )
+const valorAtualizadoTotal = itens.reduce(
+  (total, item) => total + Number(item.valor_atualizado || 0),
+  0,
+)
+
+const valoresPorElemento = opcoes.elementos
+  .map((elemento) => {
+    const dotacoesElemento = Object.values(dotacoes)
+      .flat()
+      .filter(
+        (dotacao) =>
+          String(dotacao.elemento_despesa_id) === String(elemento.id),
+      )
+
+    const estimado = dotacoesElemento.reduce(
+      (total, dotacao) => total + Number(dotacao.valor_estimado || 0),
+      0,
+    )
+
+    const atualizado = dotacoesElemento.reduce(
+      (total, dotacao) => total + Number(dotacao.valor_atualizado || 0),
+      0,
+    )
+
+    return {
+      id: elemento.id,
+      codigo: elemento.codigo,
+      descricao: elemento.descricao,
+      estimado,
+      atualizado,
+    }
+  })
+  .filter((elemento) => elemento.estimado > 0 || elemento.atualizado > 0)
+  .sort((a, b) => a.codigo.localeCompare(b.codigo, 'pt-BR'))
 
   return (
     <>
@@ -412,22 +455,63 @@ const mensagem = [
         />
       ) : (
         <>
-          <div className="process-summary">
-            <div className="summary-card">
-              <span>Total de itens</span>
-              <strong>{totalItens}</strong>
-            </div>
+          
+<div className="process-summary">
+  <div className="summary-card">
+    <span>Total de itens</span>
+    <strong>{totalItens}</strong>
+  </div>
 
-            <div className="summary-card">
-              <span>Total de dotações</span>
-              <strong>{totalDotacoes}</strong>
-            </div>
+  <div className="summary-card">
+    <span>Valor total estimado</span>
+    <strong>{formatarMoeda(valorEstimadoTotal)}</strong>
+  </div>
 
-            <div className="summary-card">
-              <span>Valor estimado total</span>
-              <strong>{formatarMoeda(valorEstimadoTotal)}</strong>
-            </div>
+  <div className="summary-card">
+    <span>Valor total atualizado</span>
+    <strong>{formatarMoeda(valorAtualizadoTotal)}</strong>
+  </div>
+</div>
+<div className="process-summary">
+  <div className="summary-card summary-card-elementos">
+    <span>Estimado por elemento de despesa</span>
+
+    {valoresPorElemento.length === 0 ? (
+      <strong>R$ 0,00</strong>
+    ) : (
+      <div className="resumo-elementos">
+        {valoresPorElemento.map((elemento) => (
+          <div key={elemento.id} className="resumo-elemento">
+            <span>
+              {elemento.codigo} — {elemento.descricao}
+            </span>
+            <strong>{formatarMoeda(elemento.estimado)}</strong>
           </div>
+        ))}
+      </div>
+    )}
+  </div>
+
+  <div className="summary-card summary-card-elementos">
+    <span>Atualizado por elemento de despesa</span>
+
+    {valoresPorElemento.length === 0 ? (
+      <strong>R$ 0,00</strong>
+    ) : (
+      <div className="resumo-elementos">
+        {valoresPorElemento.map((elemento) => (
+          <div key={elemento.id} className="resumo-elemento">
+            <span>
+              {elemento.codigo} — {elemento.descricao}
+            </span>
+            <strong>{formatarMoeda(elemento.atualizado)}</strong>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+</div>
+
 
           <ItemTable
             itens={itens}

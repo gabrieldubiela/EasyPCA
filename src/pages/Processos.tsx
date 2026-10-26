@@ -1,4 +1,3 @@
-
 import { useState } from 'react'
 import ProcessoTable from '../components/processos/ProcessoTable'
 import ProcessoForm from '../components/processos/ProcessoForm'
@@ -44,15 +43,38 @@ export default function Processos({
   const [busca, setBusca] = useState('')
   const [formularioAberto, setFormularioAberto] = useState(false)
 
+  const hoje = new Date()
+  hoje.setHours(0, 0, 0, 0)
+
   const totalProcessos = processos.length
 
-  const totalEmAndamento = processos.filter(
-    (processo) => !processo.data_conclusao,
-  ).length
-
-  const totalConcluidos = processos.filter(
+  const processosConcluidos = processos.filter(
     (processo) => Boolean(processo.data_conclusao),
-  ).length
+  )
+
+  const processosEmAtraso = processos.filter((processo) => {
+    if (processo.data_conclusao || !processo.data_prevista_encerramento) {
+      return false
+    }
+
+    const dataPrevista = new Date(
+      `${processo.data_prevista_encerramento.slice(0, 10)}T00:00:00`,
+    )
+
+    return !Number.isNaN(dataPrevista.getTime()) && dataPrevista < hoje
+  })
+
+  const totalConcluidos = processosConcluidos.length
+  const totalEmAtraso = processosEmAtraso.length
+  const totalEmAndamento = totalProcessos - totalConcluidos
+
+  const percentual = (quantidade: number) =>
+    totalProcessos === 0
+      ? '0,0%'
+      : `${((quantidade / totalProcessos) * 100).toLocaleString('pt-BR', {
+          minimumFractionDigits: 1,
+          maximumFractionDigits: 1,
+        })}%`
 
   return (
     <>
@@ -85,18 +107,27 @@ export default function Processos({
         <>
           <div className="process-summary">
             <div className="summary-card">
-              <span>Total</span>
+              <span>Total de processos</span>
               <strong>{totalProcessos}</strong>
+              <small>100% do total</small>
             </div>
 
             <div className="summary-card">
               <span>Em andamento</span>
               <strong>{totalEmAndamento}</strong>
+              <small>{percentual(totalEmAndamento)} do total</small>
             </div>
 
             <div className="summary-card">
               <span>Concluídos</span>
               <strong>{totalConcluidos}</strong>
+              <small>{percentual(totalConcluidos)} do total</small>
+            </div>
+
+            <div className="summary-card">
+              <span>Em atraso</span>
+              <strong>{totalEmAtraso}</strong>
+              <small>{percentual(totalEmAtraso)} do total</small>
             </div>
           </div>
 

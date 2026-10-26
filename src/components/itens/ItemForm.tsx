@@ -1,5 +1,5 @@
 
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 
 export type Opcao = {
   id: string
@@ -11,6 +11,12 @@ export type Opcao = {
 export type SetorDemandante = {
   id: number
   nome: string
+}
+
+export type ClassificacaoObjeto = {
+  id: string
+  codigo: string
+  descricao: string
 }
 
 export type DotacaoForm = {
@@ -26,6 +32,7 @@ export type DotacaoForm = {
   subelemento: string
   valorEstimado: string
   valorAtualizado: string
+  classificacaoObjeto: string
 }
 
 export type OpcoesDotacao = {
@@ -38,6 +45,7 @@ export type OpcoesDotacao = {
   modalidades: Opcao[]
   elementos: Opcao[]
   subelementos: Opcao[]
+  classificacoesObjeto: ClassificacaoObjeto[]
 }
 
 type Props = {
@@ -55,15 +63,15 @@ type Props = {
 }
 
 const campos = [
-  { campo: 'funcao', titulo: 'Função', grupo: 'funcoes' },
-  { campo: 'subfuncao', titulo: 'Subfunção', grupo: 'subfuncoes' },
+  { campo: 'funcao', titulo: 'Função de Governo', grupo: 'funcoes' },
+  { campo: 'subfuncao', titulo: 'Subfunção de Governo', grupo: 'subfuncoes' },
   { campo: 'programa', titulo: 'Programa', grupo: 'programas' },
-  { campo: 'acao', titulo: 'Ação orçamentária', grupo: 'acoes' },
-  { campo: 'categoria', titulo: 'Categoria econômica', grupo: 'categorias' },
-  { campo: 'grupo', titulo: 'Grupo de natureza da despesa', grupo: 'grupos' },
-  { campo: 'modalidade', titulo: 'Modalidade de aplicação', grupo: 'modalidades' },
-  { campo: 'elemento', titulo: 'Elemento de despesa', grupo: 'elementos' },
-  { campo: 'subelemento', titulo: 'Subelemento', grupo: 'subelementos' },
+  { campo: 'acao', titulo: 'Ação Orçamentária', grupo: 'acoes' },
+  { campo: 'categoria', titulo: 'Categoria de Despesa', grupo: 'categorias' },
+  { campo: 'grupo', titulo: 'Grupo de Despesa', grupo: 'grupos' },
+  { campo: 'modalidade', titulo: 'Modalidade de Aplicação', grupo: 'modalidades' },
+  { campo: 'elemento', titulo: 'Elemento de Despesa', grupo: 'elementos' },
+  { campo: 'subelemento', titulo: 'Subelemento de Despesa', grupo: 'subelementos' },
 ] as const
 
 function novaDotacao(): DotacaoForm {
@@ -78,8 +86,9 @@ function novaDotacao(): DotacaoForm {
     modalidade: '',
     elemento: '',
     subelemento: '',
-    valorEstimado: '0.00',
-    valorAtualizado: '0.00',
+    valorEstimado: '',
+    valorAtualizado: '',
+    classificacaoObjeto: '',
   }
 }
 
@@ -106,6 +115,58 @@ export default function ItemForm({
   ])
   const [erroValidacao, setErroValidacao] = useState<string | null>(null)
 
+  useEffect(() => {
+    setDotacoes((atuais) => {
+      let houveAlteracao = false
+
+      const atualizadas = atuais.map((dotacao) => {
+        const proxima = { ...dotacao }
+
+        for (const { campo, grupo } of campos) {
+          const lista =
+            campo === 'subelemento'
+              ? opcoes.subelementos.filter(
+                  (s) =>
+                    String(s.elemento_id) === String(proxima.elemento),
+                )
+              : opcoes[grupo]
+
+          if (!proxima[campo] && lista.length === 1) {
+            proxima[campo] = lista[0].id
+            houveAlteracao = true
+          }
+
+          if (campo === 'grupo' && proxima.categoria) {
+            const categoriaSelecionada = opcoes.categorias.find(
+              (opcao) => opcao.id === proxima.categoria,
+            )
+
+            if (
+              categoriaSelecionada?.codigo === '3' ||
+              categoriaSelecionada?.codigo === '4'
+            ) {
+              const grupoCorrespondente = opcoes.grupos.find(
+                (opcao) => opcao.codigo === categoriaSelecionada.codigo,
+              )
+
+              if (
+                grupoCorrespondente &&
+                proxima.grupo !== grupoCorrespondente.id
+              ) {
+                proxima.grupo = grupoCorrespondente.id
+                houveAlteracao = true
+              }
+            }
+          }
+        }
+
+        return proxima
+      })
+
+      return houveAlteracao ? atualizadas : atuais
+    })
+  }, [opcoes, dotacoes])
+
   function alterarDotacao(
     chave: string,
     campo: keyof Omit<DotacaoForm, 'chave'>,
@@ -124,6 +185,7 @@ export default function ItemForm({
         return proxima
       }),
     )
+
     setErroValidacao(null)
   }
 
@@ -139,8 +201,13 @@ export default function ItemForm({
   }
 
   function validar(): string | null {
-    if (!setorId) return 'Selecione o setor demandante.'
-    if (!descricao.trim()) return 'Informe o objeto do item.'
+    if (!setorId) {
+      return 'Selecione o setor demandante.'
+    }
+
+    if (!descricao.trim()) {
+      return 'Informe o objeto do item.'
+    }
 
     for (let i = 0; i < dotacoes.length; i++) {
       const d = dotacoes[i]
@@ -148,6 +215,10 @@ export default function ItemForm({
 
       if (campos.some(({ campo }) => !d[campo])) {
         return `Preencha todos os componentes da dotação ${numero}.`
+      }
+
+      if (!d.classificacaoObjeto) {
+        return `Selecione a classificação do objeto da dotação ${numero}.`
       }
 
       const subelementoValido = opcoes.subelementos.some(
@@ -198,27 +269,15 @@ export default function ItemForm({
 
   return (
     <div className="form-panel">
-      <div className="form-section-heading">
-        <h3>Novo item do PCA</h3>
-        <p>
-          Informe os dados do item e suas dotações orçamentárias.
-        </p>
-      </div>
-
       <form className="process-form" onSubmit={enviar}>
         <div className="form-section">
-          <div className="form-section-heading">
-            <h3>Dados do item</h3>
-            <p>Identifique o item e o setor responsável pela demanda.</p>
-          </div>
-
           <div className="form-grid">
             <label className="form-field">
               <span>Número</span>
               <input
                 value={codigo}
                 onChange={(e) => setCodigo(e.target.value)}
-                placeholder="Opcional"
+                placeholder="Informe o número do item"
                 maxLength={50}
               />
             </label>
@@ -253,13 +312,6 @@ export default function ItemForm({
         </div>
 
         <div className="form-section">
-          <div className="form-section-heading">
-            <h3>Dotações orçamentárias</h3>
-            <p>
-              Cada dotação possui classificação e valores próprios.
-            </p>
-          </div>
-
           {dotacoes.map((dotacao, indice) => {
             const subelementosDisponiveis = opcoes.subelementos.filter(
               (s) =>
@@ -267,10 +319,7 @@ export default function ItemForm({
             )
 
             return (
-              <section
-                className="dotacao-card"
-                key={dotacao.chave}
-              >
+              <section className="dotacao-card" key={dotacao.chave}>
                 <div className="form-heading">
                   <h3>Dotação {indice + 1}</h3>
 
@@ -280,9 +329,7 @@ export default function ItemForm({
                       className="secondary-button"
                       onClick={() =>
                         setDotacoes((atuais) =>
-                          atuais.filter(
-                            (d) => d.chave !== dotacao.chave,
-                          ),
+                          atuais.filter((d) => d.chave !== dotacao.chave),
                         )
                       }
                       disabled={salvando}
@@ -293,65 +340,87 @@ export default function ItemForm({
                 </div>
 
                 <div className="form-grid">
-                  {campos.map(
-                    ({ campo, titulo, grupo }, posicao) => {
-                      const lista =
-                        campo === 'subelemento'
-                          ? subelementosDisponiveis
-                          : opcoes[grupo]
+                  <label className="form-field">
+                    <span>Classificação do objeto</span>
+                    <select
+                      value={dotacao.classificacaoObjeto}
+                      onChange={(e) =>
+                        alterarDotacao(
+                          dotacao.chave,
+                          'classificacaoObjeto',
+                          e.target.value,
+                        )
+                      }
+                      required
+                      disabled={salvando}
+                    >
+                      <option value="">
+                        Selecione a classificação...
+                      </option>
 
-                      return (
-                        <label className="form-field" key={campo}>
-                          <span>
-                            {posicao + 1}. {titulo}
-                          </span>
+                      {opcoes.classificacoesObjeto.map((classificacao) => (
+                        <option
+                          key={classificacao.id}
+                          value={classificacao.id}
+                        >
+                          {classificacao.codigo} — {classificacao.descricao}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
 
-                          <select
-                            value={dotacao[campo]}
-                            onChange={(e) =>
-                              alterarDotacao(
-                                dotacao.chave,
-                                campo,
-                                e.target.value,
-                              )
-                            }
-                            required
-                            disabled={
-                              campo === 'subelemento' &&
-                              !dotacao.elemento
-                            }
-                          >
-                            <option value="">Selecione...</option>
-                            {lista.map((opcao) => (
-                              <option
-                                key={opcao.id}
-                                value={opcao.id}
-                              >
-                                {opcao.codigo} — {opcao.descricao}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      )
-                    },
-                  )}
+                  {campos.map(({ campo, titulo, grupo }, posicao) => {
+                    const lista =
+                      campo === 'subelemento'
+                        ? subelementosDisponiveis
+                        : opcoes[grupo]
+
+                    return (
+                      <label className="form-field" key={campo}>
+                        <span>
+                          {posicao + 1}. {titulo}
+                        </span>
+
+                        <select
+                          value={dotacao[campo]}
+                          onChange={(e) =>
+                            alterarDotacao(
+                              dotacao.chave,
+                              campo,
+                              e.target.value,
+                            )
+                          }
+                          required
+                          disabled={
+                            salvando ||
+                            (campo === 'subelemento' && !dotacao.elemento)
+                          }
+                        >
+                          <option value="">Selecione...</option>
+
+                          {lista.map((opcao) => (
+                            <option key={opcao.id} value={opcao.id}>
+                              {opcao.codigo} — {opcao.descricao}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    )
+                  })}
                 </div>
 
                 {dotacao.elemento &&
                   subelementosDisponiveis.length === 0 && (
                     <p className="form-hint">
-                      Não há subelementos ativos cadastrados para
-                      este elemento no exercício selecionado.
+                      Não há subelementos ativos cadastrados para este
+                      elemento no exercício selecionado.
                     </p>
                   )}
 
                 <div className="dotacao-codigo">
-                  <span>Código da dotação orçamentária</span>
-                  <strong>{codigoDotacao(dotacao)}</strong>
-                  <small>
-                    Código composto automaticamente a partir da
-                    classificação selecionada.
-                  </small>
+                  <h3><span>Código da dotação orçamentária</span>
+                  <span>    </span>
+                  <strong>{codigoDotacao(dotacao)}</strong></h3>
                 </div>
 
                 <div className="form-grid">
@@ -370,6 +439,7 @@ export default function ItemForm({
                         )
                       }
                       required
+                      disabled={salvando}
                     />
                   </label>
 
@@ -388,6 +458,7 @@ export default function ItemForm({
                         )
                       }
                       required
+                      disabled={salvando}
                     />
                   </label>
                 </div>
@@ -400,10 +471,7 @@ export default function ItemForm({
               type="button"
               className="secondary-button"
               onClick={() =>
-                setDotacoes((atuais) => [
-                  ...atuais,
-                  novaDotacao(),
-                ])
+                setDotacoes((atuais) => [...atuais, novaDotacao()])
               }
               disabled={salvando}
             >
@@ -424,8 +492,7 @@ export default function ItemForm({
               {moeda(
                 dotacoes.reduce(
                   (soma, d) =>
-                    soma +
-                    Math.max(0, Number(d.valorEstimado) || 0),
+                    soma + Math.max(0, Number(d.valorEstimado) || 0),
                   0,
                 ),
               )}
@@ -438,8 +505,7 @@ export default function ItemForm({
               {moeda(
                 dotacoes.reduce(
                   (soma, d) =>
-                    soma +
-                    Math.max(0, Number(d.valorAtualizado) || 0),
+                    soma + Math.max(0, Number(d.valorAtualizado) || 0),
                   0,
                 ),
               )}
@@ -453,29 +519,23 @@ export default function ItemForm({
           </p>
         )}
 
-        <div className="form-footer">
-          <p className="form-required-note">
-            Preencha todos os campos obrigatórios antes de salvar.
-          </p>
+        <div className="form-actions">
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={onCancel}
+            disabled={salvando}
+          >
+            Cancelar
+          </button>
 
-          <div className="form-actions">
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={onCancel}
-              disabled={salvando}
-            >
-              Cancelar
-            </button>
-
-            <button
-              type="submit"
-              className="primary-button"
-              disabled={salvando}
-            >
-              {salvando ? 'Salvando...' : 'Salvar item'}
-            </button>
-          </div>
+          <button
+            type="submit"
+            className="primary-button"
+            disabled={salvando}
+          >
+            {salvando ? 'Salvando...' : 'Salvar item'}
+          </button>
         </div>
       </form>
     </div>

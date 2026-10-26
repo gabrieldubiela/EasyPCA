@@ -575,11 +575,13 @@ a:hover {
    RESUMO DE PROCESSOS
 ========================================================= */
 
+
 .process-summary {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 18px;
   margin-bottom: 26px;
+  width: 100%;
 }
 
 .summary-card {
@@ -1369,4 +1371,51 @@ a:hover {
     align-items: flex-start;
     flex-direction: column;
   }
+}
+
+
+.resumo-elementos {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 12px;
+  width: 100%;
+}
+
+.resumo-elemento {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border-color, #e2e8f0);
+}
+
+.resumo-elemento > span {
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-secondary, #64748b);
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.resumo-elemento > strong {
+  font-size: 13px;
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+
+/* Remove as setas dos campos numéricos */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type='number'] {
+  appearance: textfield;
+  -moz-appearance: textfield;
 }
