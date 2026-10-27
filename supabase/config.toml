@@ -1,0 +1,3 @@
+
+[functions.gerenciar-usuarios]
+verify_jwt = false

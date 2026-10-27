@@ -1,9 +1,11 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { montarCodigoOrcamentario } from '../../utils/classificacaoOrcamentaria'
 import { supabase } from '../../lib/supabase'
 
 type ProcessoFormProps = {
   exercicioId: string
+  processoId?: string
   onCancel: () => void
   onSaved: () => void
 }
@@ -39,11 +41,24 @@ type ItemPCA = {
 
 type DotacaoItem = {
   item_pca_id: string
+  funcao_id: string
+  subfuncao_id: string
+  programa_id: string
+  acao_orcamentaria_id: string
+  categoria_economica_id: string
+  grupo_natureza_id: string
+  modalidade_aplicacao_id: string
   elemento_despesa_id: string
   subelemento_id: string
   classificacao_objeto_id: string | null
   valor_estimado: number | string
   valor_atualizado: number | string
+}
+
+type OpcaoOrcamentaria = {
+  id: string
+  codigo: string
+  descricao: string
 }
 
 type TotalSubelemento = {
@@ -128,6 +143,7 @@ function compararCodigoNumerico(a: ItemPCA, b: ItemPCA) {
 
 export default function ProcessoForm({
   exercicioId,
+  processoId,
   onCancel,
   onSaved,
 }: ProcessoFormProps) {
@@ -172,6 +188,13 @@ export default function ProcessoForm({
           elementosResult,
           subelementosResult,
           classificacoesResult,
+          funcoesResult,
+          subfuncoesResult,
+          programasResult,
+          acoesResult,
+          categoriasResult,
+          gruposResult,
+          modalidadesAplicacaoResult,
         ] = await Promise.all([
           supabase
             .from('setor_demandante')
@@ -186,9 +209,7 @@ export default function ProcessoForm({
 
           supabase
             .from('limites_licitacao')
-            .select(
-              'id, modalidade, fundamento_legal, descricao, tipo, valor',
-            )
+            .select('id, modalidade, fundamento_legal, descricao, tipo, valor')
             .eq('exercicio_id', exercicioId)
             .eq('tipo', 'limite'),
 
@@ -200,7 +221,7 @@ export default function ProcessoForm({
           supabase
             .from('itens_pca_dotacoes')
             .select(
-              'item_pca_id, elemento_despesa_id, subelemento_id, classificacao_objeto_id, valor_estimado, valor_atualizado',
+              'item_pca_id, funcao_id, subfuncao_id, programa_id, acao_orcamentaria_id, categoria_economica_id, grupo_natureza_id, modalidade_aplicacao_id, elemento_despesa_id, subelemento_id, classificacao_objeto_id, valor_estimado, valor_atualizado',
             )
             .eq('exercicio_id', exercicioId),
 
@@ -225,6 +246,41 @@ export default function ProcessoForm({
             .from('classificacoes_objeto')
             .select('id, codigo, descricao')
             .order('codigo'),
+
+          supabase
+            .from('funcoes_governo')
+            .select('id, codigo, descricao')
+            .eq('exercicio_id', exercicioId),
+
+          supabase
+            .from('subfuncoes_governo')
+            .select('id, codigo, descricao')
+            .eq('exercicio_id', exercicioId),
+
+          supabase
+            .from('programas')
+            .select('id, codigo, descricao')
+            .eq('exercicio_id', exercicioId),
+
+          supabase
+            .from('acoes_orcamentarias')
+            .select('id, codigo, descricao')
+            .eq('exercicio_id', exercicioId),
+
+          supabase
+            .from('categorias_economicas')
+            .select('id, codigo, descricao')
+            .eq('exercicio_id', exercicioId),
+
+          supabase
+            .from('grupos_natureza_despesa')
+            .select('id, codigo, descricao')
+            .eq('exercicio_id', exercicioId),
+
+          supabase
+            .from('modalidades_aplicacao')
+            .select('id, codigo, descricao')
+            .eq('exercicio_id', exercicioId),
         ])
 
         if (setoresResult.error) throw setoresResult.error
@@ -232,12 +288,24 @@ export default function ProcessoForm({
         if (limitesResult.error) throw limitesResult.error
         if (itensResult.error) throw itensResult.error
         if (dotacoesResult.error) throw dotacoesResult.error
+
         if (totaisSubelementosResult.error) {
           throw totaisSubelementosResult.error
         }
+
         if (elementosResult.error) throw elementosResult.error
         if (subelementosResult.error) throw subelementosResult.error
         if (classificacoesResult.error) throw classificacoesResult.error
+        if (funcoesResult.error) throw funcoesResult.error
+        if (subfuncoesResult.error) throw subfuncoesResult.error
+        if (programasResult.error) throw programasResult.error
+        if (acoesResult.error) throw acoesResult.error
+        if (categoriasResult.error) throw categoriasResult.error
+        if (gruposResult.error) throw gruposResult.error
+
+        if (modalidadesAplicacaoResult.error) {
+          throw modalidadesAplicacaoResult.error
+        }
 
         if (!ativo) return
 
@@ -258,6 +326,21 @@ export default function ProcessoForm({
         const classificacoesCarregadas =
           (classificacoesResult.data ?? []) as ClassificacaoObjeto[]
 
+        const funcoesCarregadas =
+          (funcoesResult.data ?? []) as OpcaoOrcamentaria[]
+        const subfuncoesCarregadas =
+          (subfuncoesResult.data ?? []) as OpcaoOrcamentaria[]
+        const programasCarregados =
+          (programasResult.data ?? []) as OpcaoOrcamentaria[]
+        const acoesCarregadas =
+          (acoesResult.data ?? []) as OpcaoOrcamentaria[]
+        const categoriasCarregadas =
+          (categoriasResult.data ?? []) as OpcaoOrcamentaria[]
+        const gruposCarregados =
+          (gruposResult.data ?? []) as OpcaoOrcamentaria[]
+        const modalidadesAplicacaoCarregadas =
+          (modalidadesAplicacaoResult.data ?? []) as OpcaoOrcamentaria[]
+
         const elementosPorId = new Map(
           elementosCarregados.map((elemento) => [elemento.id, elemento]),
         )
@@ -276,6 +359,37 @@ export default function ProcessoForm({
           ]),
         )
 
+        const funcoesPorId = new Map(
+          funcoesCarregadas.map((opcao) => [opcao.id, opcao]),
+        )
+
+        const subfuncoesPorId = new Map(
+          subfuncoesCarregadas.map((opcao) => [opcao.id, opcao]),
+        )
+
+        const programasPorId = new Map(
+          programasCarregados.map((opcao) => [opcao.id, opcao]),
+        )
+
+        const acoesPorId = new Map(
+          acoesCarregadas.map((opcao) => [opcao.id, opcao]),
+        )
+
+        const categoriasPorId = new Map(
+          categoriasCarregadas.map((opcao) => [opcao.id, opcao]),
+        )
+
+        const gruposPorId = new Map(
+          gruposCarregados.map((opcao) => [opcao.id, opcao]),
+        )
+
+        const modalidadesAplicacaoPorId = new Map(
+          modalidadesAplicacaoCarregadas.map((opcao) => [
+            opcao.id,
+            opcao,
+          ]),
+        )
+
         const dotacoesPorItem = new Map<string, DotacaoItem[]>()
 
         for (const dotacao of dotacoesCarregadas) {
@@ -287,27 +401,53 @@ export default function ProcessoForm({
         const itensCalculados: ItemCalculado[] = itensCarregados.map(
           (item) => {
             const dotacoesItem = dotacoesPorItem.get(item.id) ?? []
-            const elemento = elementosPorId.get(item.elemento_despesa_id)
 
-            const codigosSubelementos = [
+            const codigosDotacao = [
               ...new Set(
-                dotacoesItem
-                  .map(
-                    (registro) =>
-                      subelementosPorId.get(registro.subelemento_id)?.codigo,
-                  )
-                  .filter((codigo): codigo is string => Boolean(codigo)),
+                dotacoesItem.map((registro) =>
+                  montarCodigoOrcamentario([
+                    {
+                      codigo: funcoesPorId.get(registro.funcao_id)?.codigo,
+                    },
+                    {
+                      codigo: subfuncoesPorId.get(registro.subfuncao_id)
+                        ?.codigo,
+                    },
+                    {
+                      codigo: programasPorId.get(registro.programa_id)?.codigo,
+                    },
+                    {
+                      codigo: acoesPorId.get(registro.acao_orcamentaria_id)
+                        ?.codigo,
+                    },
+                    {
+                      codigo: categoriasPorId.get(
+                        registro.categoria_economica_id,
+                      )?.codigo,
+                    },
+                    {
+                      codigo: gruposPorId.get(registro.grupo_natureza_id)
+                        ?.codigo,
+                    },
+                    {
+                      codigo: modalidadesAplicacaoPorId.get(
+                        registro.modalidade_aplicacao_id,
+                      )?.codigo,
+                    },
+                    {
+                      codigo: elementosPorId.get(registro.elemento_despesa_id)
+                        ?.codigo,
+                    },
+                    {
+                      codigo: subelementosPorId.get(registro.subelemento_id)
+                        ?.codigo,
+                    },
+                  ]),
+                ),
               ),
             ]
 
-            const dotacao = [
-              elemento?.codigo,
-              codigosSubelementos.length
-                ? `Subelemento(s): ${codigosSubelementos.join(', ')}`
-                : null,
-            ]
-              .filter(Boolean)
-              .join(' — ')
+            const dotacao = codigosDotacao.join('; ')
 
             const classificacaoIds = [
               ...new Set(
@@ -343,7 +483,8 @@ export default function ProcessoForm({
                   total + Number(registro.valor_atualizado || 0),
                 0,
               ),
-              dotacao: dotacao || 'Classificação orçamentária não disponível',
+              dotacao:
+                dotacao || 'Classificação orçamentária não disponível',
               classificacao_objeto_id:
                 classificacoesItem.length === 1
                   ? classificacoesItem[0].id
@@ -383,15 +524,85 @@ export default function ProcessoForm({
 
     if (exercicioId) {
       void carregarDados()
-    } else {
-      setCarregando(false)
-      setErro('Nenhum exercício orçamentário foi selecionado.')
     }
 
     return () => {
       ativo = false
     }
   }, [exercicioId])
+
+
+  useEffect(() => {
+    let ativo = true
+
+    async function carregarProcessoParaEdicao() {
+      if (!processoId) return
+
+      setCarregando(true)
+      setErro(null)
+
+      try {
+        const [
+          processoResult,
+          vinculosResult,
+        ] = await Promise.all([
+          supabase
+            .from('processos_pca')
+            .select(
+              'id, setor_demandante_id, objeto, numero_processo_eletronico, numero_processo_compras, modalidade_id, numero_modalidade, data_abertura, data_prevista_encerramento, data_conclusao',
+            )
+            .eq('id', processoId)
+            .eq('exercicio_id', exercicioId)
+            .single(),
+
+          supabase
+            .from('processos_pca_itens')
+            .select('item_pca_id')
+            .eq('processo_id', processoId)
+            .eq('exercicio_id', exercicioId),
+        ])
+
+        if (processoResult.error) throw processoResult.error
+        if (vinculosResult.error) throw vinculosResult.error
+        if (!ativo) return
+
+        const processo = processoResult.data
+
+        setSetorDemandante(String(processo.setor_demandante_id))
+        setObjeto(processo.objeto ?? '')
+        setNumeroEletronico(processo.numero_processo_eletronico ?? '')
+        setNumeroCompras(processo.numero_processo_compras ?? '')
+        setModalidadeId(processo.modalidade_id ?? '')
+        setNumeroModalidade(processo.numero_modalidade ?? '')
+        setDataAbertura(processo.data_abertura?.slice(0, 10) ?? '')
+        setDataEncerramento(
+          processo.data_prevista_encerramento?.slice(0, 10) ?? '',
+        )
+        setDataConclusao(processo.data_conclusao?.slice(0, 10) ?? '')
+
+        setItensSelecionados(
+          (vinculosResult.data ?? []).map((vinculo) => vinculo.item_pca_id),
+        )
+      } catch (error) {
+        if (!ativo) return
+
+        setErro(
+          `Não foi possível carregar o processo para edição: ${
+            error instanceof Error ? error.message : 'erro desconhecido'
+          }`,
+        )
+      } finally {
+        if (ativo) setCarregando(false)
+      }
+    }
+
+    void carregarProcessoParaEdicao()
+
+    return () => {
+      ativo = false
+    }
+  }, [processoId, exercicioId])
+
 
   const itensOrdenados = useMemo(
     () => [...itens].sort(compararCodigoNumerico),
@@ -432,24 +643,7 @@ export default function ProcessoForm({
       return total + Number(registro.valor_estimado_total || 0)
     }, 0)
   }, [itensSelecionadosDetalhes, totaisSubelementos])
-
-  const dotacoesSelecionadas = [
-    ...new Set(
-      itensSelecionadosDetalhes
-        .map((item) => item.dotacao)
-        .filter(
-          (dotacao) =>
-            dotacao !== 'Classificação orçamentária não disponível',
-        ),
-    ),
-  ]
-
-  const classificacoesSelecionadas = [
-    ...new Set(
-      itensSelecionadosDetalhes.map((item) => item.classificacao_objeto),
-    ),
-  ]
-
+  
   const sugestaoModalidade = useMemo<SugestaoModalidade | null>(() => {
     if (itensSelecionadosDetalhes.length === 0) return null
 
@@ -501,7 +695,7 @@ export default function ProcessoForm({
       return {
         titulo:
           valorConsolidadoSubelementos < Number(limite.valor)
-            ? 'Dispensa por valor'
+            ? 'Dispensa de licitação'
             : nomeModalidade,
         limite,
       }
@@ -582,7 +776,7 @@ export default function ProcessoForm({
     if (modalidadeCorrespondente) {
       setModalidadeId(modalidadeCorrespondente.id)
     }
-  }, [sugestaoModalidade, modalidades])
+  }, [processoId, sugestaoModalidade, modalidades])
 
   function alternarItem(itemId: string) {
     setItensSelecionados((atuais) =>
@@ -625,58 +819,96 @@ export default function ProcessoForm({
       return
     }
 
+    
     try {
-      const { data: processo, error: erroProcesso } = await supabase
-        .from('processos_pca')
-        .insert({
-          exercicio_id: exercicioId,
-          setor_demandante_id: Number(setorDemandante),
-          objeto: objeto.trim(),
-          numero_processo_eletronico: numeroEletronico.trim() || null,
-          numero_processo_compras: numeroCompras.trim() || null,
-          modalidade_id: modalidadeId,
-          numero_modalidade: numeroModalidade.trim() || null,
-          data_abertura: dataAbertura || null,
-          data_prevista_encerramento: dataEncerramento || null,
-          data_conclusao: dataConclusao || null,
-        })
-        .select('id')
-        .single()
-
-      if (erroProcesso) throw erroProcesso
-
-      const vinculos = itensSelecionados.map((itemId) => ({
+      const dadosProcesso = {
         exercicio_id: exercicioId,
-        processo_id: processo.id,
-        item_pca_id: itemId,
-      }))
-
-      const { error: erroVinculos } = await supabase
-        .from('processos_pca_itens')
-        .insert(vinculos)
-
-      if (erroVinculos) {
-        const { error: erroExclusao } = await supabase
-          .from('processos_pca')
-          .delete()
-          .eq('id', processo.id)
-          .eq('exercicio_id', exercicioId)
-
-        if (erroExclusao) {
-          throw new Error(
-            `O processo foi criado, mas não foi possível vincular os itens. ` +
-              `Também não foi possível desfazer a criação. Processo: ${processo.id}. ` +
-              `Erro dos vínculos: ${erroVinculos.message}. ` +
-              `Erro ao desfazer: ${erroExclusao.message}`,
-          )
-        }
-
-        throw new Error(
-          `Os itens não foram vinculados e o processo foi removido. ` +
-            `Detalhes: ${erroVinculos.message}`,
-        )
+        setor_demandante_id: Number(setorDemandante),
+        objeto: objeto.trim(),
+        numero_processo_eletronico: numeroEletronico.trim() || null,
+        numero_processo_compras: numeroCompras.trim() || null,
+        modalidade_id: modalidadeId,
+        numero_modalidade: numeroModalidade.trim() || null,
+        data_abertura: dataAbertura || null,
+        data_prevista_encerramento: dataEncerramento || null,
+        data_conclusao: dataConclusao || null,
       }
 
+      let idProcesso = processoId
+
+      if (processoId) {
+        const { error: erroAtualizacao } = await supabase
+          .from('processos_pca')
+          .update(dadosProcesso)
+          .eq('id', processoId)
+          .eq('exercicio_id', exercicioId)
+
+        if (erroAtualizacao) throw erroAtualizacao
+      } else {
+        const { data: processo, error: erroProcesso } = await supabase
+          .from('processos_pca')
+          .insert(dadosProcesso)
+          .select('id')
+          .single()
+
+        if (erroProcesso) throw erroProcesso
+
+        idProcesso = processo.id
+      }
+
+      if (!idProcesso) {
+        throw new Error('Não foi possível identificar o processo salvo.')
+      }
+
+      const { data: vinculosAtuais, error: erroConsultaVinculos } =
+        await supabase
+          .from('processos_pca_itens')
+          .select('item_pca_id')
+          .eq('processo_id', idProcesso)
+          .eq('exercicio_id', exercicioId)
+
+      if (erroConsultaVinculos) throw erroConsultaVinculos
+
+      const idsAtuais = (vinculosAtuais ?? []).map(
+        (vinculo) => vinculo.item_pca_id,
+      )
+
+      const idsParaAdicionar = itensSelecionados.filter(
+        (id) => !idsAtuais.includes(id),
+      )
+
+      const idsParaRemover = idsAtuais.filter(
+        (id) => !itensSelecionados.includes(id),
+      )
+
+      if (idsParaAdicionar.length > 0) {
+        const { error: erroAdicao } = await supabase
+          .from('processos_pca_itens')
+          .insert(
+            idsParaAdicionar.map((itemId) => ({
+              exercicio_id: exercicioId,
+              processo_id: idProcesso,
+              item_pca_id: itemId,
+            })),
+          )
+
+        if (erroAdicao) throw erroAdicao
+      }
+
+      if (idsParaRemover.length > 0) {
+        const { error: erroRemocao } = await supabase
+          .from('processos_pca_itens')
+          .delete()
+          .eq('processo_id', idProcesso)
+          .eq('exercicio_id', exercicioId)
+          .in('item_pca_id', idsParaRemover)
+
+        if (erroRemocao) {
+          throw new Error(
+            `Os dados do processo foram salvos, mas não foi possível remover alguns vínculos de itens: ${erroRemocao.message}`,
+          )
+        }
+      }
       onSaved()
     } catch (error) {
       setErro(
@@ -688,6 +920,7 @@ export default function ProcessoForm({
       setSalvando(false)
     }
   }
+
 
   return (
     <div className="form-panel">
@@ -736,11 +969,7 @@ export default function ProcessoForm({
         {/* Itens logo abaixo do objeto */}
         <section className="form-section">
           <div className="form-section-heading">
-            <h3>Itens do PCA</h3>
-            <p>
-              Selecione os itens que farão parte deste processo. A lista está
-              ordenada pelo código numérico.
-            </p>
+            <h3>Itens</h3>
           </div>
 
           {carregando ? (
@@ -835,47 +1064,14 @@ export default function ProcessoForm({
             </div>
 
             <div className="form-field">
-              <label htmlFor="valorAtualizadoTotal">Valor atualizado total</label>
+              <label htmlFor="valorAtualizadoTotal">
+                Valor atualizado total
+              </label>
               <input
                 id="valorAtualizadoTotal"
                 value={moeda(valorAtualizadoTotal)}
                 readOnly
                 aria-label="Valor atualizado total dos itens selecionados"
-              />
-            </div>
-
-            <div className="form-field form-field-full">
-              <label htmlFor="dotacoesSelecionadas">
-                Classificação orçamentária dos itens
-              </label>
-              <textarea
-                id="dotacoesSelecionadas"
-                value={
-                  dotacoesSelecionadas.length
-                    ? dotacoesSelecionadas.join('\n')
-                    : 'Selecione itens para visualizar a classificação disponível.'
-                }
-                readOnly
-                rows={Math.min(Math.max(dotacoesSelecionadas.length, 2), 6)}
-              />
-            </div>
-
-            <div className="form-field form-field-full">
-              <label htmlFor="classificacoesSelecionadas">
-                Classificação dos objetos selecionados
-              </label>
-              <textarea
-                id="classificacoesSelecionadas"
-                value={
-                  classificacoesSelecionadas.length
-                    ? classificacoesSelecionadas.join('\n')
-                    : 'Selecione itens para visualizar a classificação dos objetos.'
-                }
-                readOnly
-                rows={Math.min(
-                  Math.max(classificacoesSelecionadas.length, 2),
-                  6,
-                )}
               />
             </div>
           </div>
@@ -945,9 +1141,7 @@ export default function ProcessoForm({
 
                   {normalizar(sugestaoModalidade.titulo) !==
                     'ANALISE MANUAL NECESSARIA' &&
-                    modalidades.some(
-                      (item) => item.id === modalidadeId,
-                    ) &&
+                    modalidades.some((item) => item.id === modalidadeId) &&
                     normalizar(
                       modalidades.find((item) => item.id === modalidadeId)
                         ?.modalidade ?? '',
@@ -967,7 +1161,7 @@ export default function ProcessoForm({
                 value={numeroModalidade}
                 onChange={(event) => setNumeroModalidade(event.target.value)}
                 maxLength={100}
-                placeholder="Ex.: Pregão nº 12/2027"
+                placeholder="Ex: 12/2027"
               />
             </div>
 
@@ -1025,10 +1219,6 @@ export default function ProcessoForm({
         )}
 
         <div className="form-footer">
-          <p className="form-required-note">
-            <span className="required-mark">*</span> Campos obrigatórios
-          </p>
-
           <div className="form-actions">
             <button
               type="button"

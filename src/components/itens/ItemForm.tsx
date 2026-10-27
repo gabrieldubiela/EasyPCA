@@ -1,5 +1,6 @@
 
 import { useEffect, useState, type FormEvent } from 'react'
+import { montarCodigoOrcamentario } from '../../utils/classificacaoOrcamentaria'
 
 export type Opcao = {
   id: string
@@ -35,6 +36,14 @@ export type DotacaoForm = {
   classificacaoObjeto: string
 }
 
+export type ItemFormData = {
+  id: string
+  codigo: string | null
+  descricao: string
+  setor_demandante_id: number | null
+  dotacoes: DotacaoForm[]
+}
+
 export type OpcoesDotacao = {
   funcoes: Opcao[]
   subfuncoes: Opcao[]
@@ -53,6 +62,7 @@ type Props = {
   opcoes: OpcoesDotacao
   salvando: boolean
   erro: string | null
+  itemInicial?: ItemFormData | null
   onCancel: () => void
   onSave: (dados: {
     codigo: string
@@ -104,6 +114,7 @@ export default function ItemForm({
   opcoes,
   salvando,
   erro,
+  itemInicial,
   onCancel,
   onSave,
 }: Props) {
@@ -114,6 +125,27 @@ export default function ItemForm({
     novaDotacao(),
   ])
   const [erroValidacao, setErroValidacao] = useState<string | null>(null)
+
+  useEffect(() => {
+    setCodigo(itemInicial?.codigo ?? '')
+    setDescricao(itemInicial?.descricao ?? '')
+    setSetorId(
+      itemInicial?.setor_demandante_id != null
+        ? String(itemInicial.setor_demandante_id)
+        : '',
+    )
+
+    setDotacoes(
+      itemInicial?.dotacoes.length
+        ? itemInicial.dotacoes.map((dotacao) => ({
+            ...dotacao,
+            chave: novaDotacao().chave,
+          }))
+        : [novaDotacao()],
+    )
+
+    setErroValidacao(null)
+  }, [itemInicial])
 
   useEffect(() => {
     setDotacoes((atuais) => {
@@ -190,14 +222,13 @@ export default function ItemForm({
   }
 
   function codigoDotacao(dotacao: DotacaoForm) {
-    return campos
-      .map(
-        ({ campo, grupo }) =>
-          opcoes[grupo].find(
-            (opcao) => opcao.id === dotacao[campo],
-          )?.codigo ?? '—',
-      )
-      .join('.')
+    return montarCodigoOrcamentario(
+      campos.map(({ campo, grupo }) => ({
+        codigo: opcoes[grupo].find(
+          (opcao) => opcao.id === dotacao[campo],
+        )?.codigo,
+      })),
+    )
   }
 
   function validar(): string | null {

@@ -29,6 +29,7 @@ export type Dotacao = {
   modalidade_aplicacao_id: string
   elemento_despesa_id: string
   subelemento_id: string
+  classificacao_objeto_id: string
   valor_estimado: number
   valor_atualizado: number
 }
@@ -42,6 +43,8 @@ type Props = {
   erro: string | null
   aoNovoItem: () => void
   permitirNovoItem: boolean
+  aoEditar: (item: Item) => void
+  aoExcluir: (item: Item) => void
 }
 
 function formatarMoeda(valor: number | null | undefined) {
@@ -89,6 +92,8 @@ export default function ItemTable({
   opcoes,
   carregando,
   erro,
+  aoEditar,
+  aoExcluir,
 }: Props) {
   const [busca, setBusca] = useState('')
 
@@ -161,6 +166,7 @@ export default function ItemTable({
                 <th>Dotações orçamentárias</th>
                 <th>Valor estimado</th>
                 <th>Valor atualizado</th>
+                <th className="actions-column">Ações</th>
               </tr>
             </thead>
 
@@ -191,10 +197,8 @@ export default function ItemTable({
                       ) : (
                         <div className="item-dotacoes">
                           {dotacoesDoItem.map((dotacao) => (
-                            <div key={dotacao.id}>                              
-                              <div>
-                                {textoDotacao(dotacao, opcoes)}
-                              </div>
+                            <div key={dotacao.id}>
+                              {textoDotacao(dotacao, opcoes)}
                             </div>
                           ))}
                         </div>
@@ -207,6 +211,55 @@ export default function ItemTable({
 
                     <td>
                       {formatarMoeda(item.valor_atualizado)}
+                    </td>
+
+                    <td>
+                      <div className="table-actions">
+                        <button
+                          type="button"
+                          className="icon-action-button"
+                          onClick={() => aoEditar(item)}
+                          title="Editar item"
+                          aria-label={`Editar item ${item.codigo || item.descricao}`}
+                        >
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                          >
+                            <path d="M12 20h9" />
+                            <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z" />
+                          </svg>
+                        </button>
+
+                        <button
+                          type="button"
+                          className="icon-action-button delete-icon-button"
+                          onClick={() => aoExcluir(item)}
+                          title="Excluir item"
+                          aria-label={`Excluir item ${item.codigo || item.descricao}`}
+                        >
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                          >
+                            <path d="M3 6h18" />
+                            <path d="M8 6V4h8v2" />
+                            <path d="m19 6-1 14H6L5 6" />
+                            <path d="M10 11v5" />
+                            <path d="M14 11v5" />
+                          </svg>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 )
