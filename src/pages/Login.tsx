@@ -68,9 +68,9 @@ export default function Login() {
           </div>
 
           {erro && (
-            <p className="login-error" role="alert">
-              {erro}
-            </p>
+            <div className="message-card error" role="alert">
+  {erro}
+</div>
           )}
 
           <button

@@ -394,7 +394,7 @@ export default function ItemForm({
                           key={classificacao.id}
                           value={classificacao.id}
                         >
-                          {classificacao.codigo} — {classificacao.descricao}
+                          {classificacao.descricao}
                         </option>
                       ))}
                     </select>
@@ -431,7 +431,7 @@ export default function ItemForm({
 
                           {lista.map((opcao) => (
                             <option key={opcao.id} value={opcao.id}>
-                              {opcao.codigo} — {opcao.descricao}
+                              {opcao.codigo} - {opcao.descricao}
                             </option>
                           ))}
                         </select>

@@ -273,10 +273,6 @@ export default function App() {
           : paginaAtiva
 
   function renderizarPagina() {
-    if (paginaExibida === 'Login' && !sessao) {
-      return <Login />
-    }
-
     if (paginaExibida === 'Painel') {
       return (
         <Painel
@@ -332,9 +328,13 @@ export default function App() {
     )
   }
 
-  return (
-    <div className="app-shell">
-      <Sidebar
+  if (paginaExibida === 'Login' && !sessao) {
+  return <Login />
+}
+
+return (
+  <div className="app-shell">
+    <Sidebar
         paginaAtiva={paginaExibida}
         onSelecionarPagina={selecionarPagina}
         exercicioId={exercicioId}

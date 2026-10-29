@@ -151,6 +151,7 @@ export default function ProcessoForm({
   const [modalidades, setModalidades] = useState<Modalidade[]>([])
   const [limites, setLimites] = useState<LimiteLicitacao[]>([])
   const [itens, setItens] = useState<ItemCalculado[]>([])
+  const [itensVinculados, setItensVinculados] = useState<string[]>([])
   const [totaisSubelementos, setTotaisSubelementos] = useState<
     TotalSubelemento[]
   >([])
@@ -195,6 +196,7 @@ export default function ProcessoForm({
           categoriasResult,
           gruposResult,
           modalidadesAplicacaoResult,
+          vinculosResult,
         ] = await Promise.all([
           supabase
             .from('setor_demandante')
@@ -281,6 +283,11 @@ export default function ProcessoForm({
             .from('modalidades_aplicacao')
             .select('id, codigo, descricao')
             .eq('exercicio_id', exercicioId),
+
+          supabase
+            .from('processos_pca_itens')
+            .select('item_pca_id')
+            .eq('exercicio_id', exercicioId),
         ])
 
         if (setoresResult.error) throw setoresResult.error
@@ -302,10 +309,8 @@ export default function ProcessoForm({
         if (acoesResult.error) throw acoesResult.error
         if (categoriasResult.error) throw categoriasResult.error
         if (gruposResult.error) throw gruposResult.error
-
-        if (modalidadesAplicacaoResult.error) {
-          throw modalidadesAplicacaoResult.error
-        }
+        if (modalidadesAplicacaoResult.error) throw modalidadesAplicacaoResult.error
+        if (vinculosResult.error) throw vinculosResult.error
 
         if (!ativo) return
 
@@ -509,6 +514,11 @@ export default function ProcessoForm({
         setLimites(limitesCarregados)
         setItens(itensCalculados)
         setTotaisSubelementos(totaisSubelementosCarregados)
+        setItensVinculados([
+          ...new Set(
+          (vinculosResult.data ?? []).map((vinculo) => vinculo.item_pca_id),
+          ),
+        ])
       } catch (error) {
         if (!ativo) return
 
@@ -604,10 +614,15 @@ export default function ProcessoForm({
   }, [processoId, exercicioId])
 
 
-  const itensOrdenados = useMemo(
-    () => [...itens].sort(compararCodigoNumerico),
-    [itens],
-  )
+  const itensOrdenados = useMemo(() => {
+    const itensDisponiveis = itens.filter(
+      (item) =>
+        !itensVinculados.includes(item.id) ||
+        (processoId && itensSelecionados.includes(item.id)),
+    )
+
+    return [...itensDisponiveis].sort(compararCodigoNumerico)
+  }, [itens, itensVinculados, processoId, itensSelecionados])
 
   const itensSelecionadosDetalhes = useMemo(
     () => itens.filter((item) => itensSelecionados.includes(item.id)),

@@ -100,7 +100,8 @@ export default function ItemTable({
   const termo = busca.toLocaleLowerCase('pt-BR').trim()
 
   const itensFiltrados = useMemo(() => {
-    return itens.filter((item) => {
+  return itens
+    .filter((item) => {
       if (!termo) return true
 
       const setor = setores.find(
@@ -120,7 +121,29 @@ export default function ItemTable({
         valor.toLocaleLowerCase('pt-BR').includes(termo),
       )
     })
-  }, [itens, setores, dotacoes, opcoes, termo])
+    .sort((a, b) => {
+      const numeroA = Number(a.codigo)
+      const numeroB = Number(b.codigo)
+
+      // Números válidos vêm primeiro, em ordem crescente.
+      const aValido = a.codigo?.trim() !== '' && Number.isFinite(numeroA)
+      const bValido = b.codigo?.trim() !== '' && Number.isFinite(numeroB)
+
+      if (aValido && bValido) {
+        return numeroA - numeroB
+      }
+
+      if (aValido) return -1
+      if (bValido) return 1
+
+      // Códigos não numéricos ficam em ordem alfabética.
+      return (a.codigo ?? '').localeCompare(
+        b.codigo ?? '',
+        'pt-BR',
+        { numeric: true, sensitivity: 'base' },
+      )
+    })
+}, [itens, setores, dotacoes, opcoes, termo])
 
   return (
     <div className="list-panel">
